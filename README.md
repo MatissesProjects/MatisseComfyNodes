@@ -20,5 +20,4 @@ simple string concatenation
 our own string primitive so we dont have to depend on other libraries for now
 
 ### image selector:
-####BROKEN
-selects an image from a list of images. Currently broken needs to select correct channel
+selects an image from a list of images. Can be the first, last, or a random image
