@@ -10,7 +10,7 @@ import base64
 import io
 import requests
 import folder_paths as comfy_paths
-
+import utils
 # wildcard trick is 100% stolen from pythongossss's
 class AnyType(str):
     def __ne__(self, __value: object) -> bool:
@@ -258,10 +258,12 @@ class ImageSelector():
     FUNCTION = "selectImage"
     OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
+
     def selectImage(self, images, imageToSelect):
-        selector = -1 if imageToSelect == 'last' else 0 if imageToSelect == 'first' else random.randint(0,len(images))
-        return (images[selector],)
-   
+        selector = len(images) - 1 if imageToSelect == 'last' else 0 if imageToSelect == 'first' else random.randint(0, len(images) - 1)
+        selected_image = images[selector:selector+1]
+        return (selected_image,)
+
     @classmethod
     def IS_CHANGED(cls) -> float: return float("nan")
 
