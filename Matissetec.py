@@ -6,7 +6,9 @@ import subprocess
 import os
 import random
 import nodes
-
+import base64
+import io
+import requests
 import folder_paths as comfy_paths
 
 # wildcard trick is 100% stolen from pythongossss's
@@ -41,6 +43,7 @@ class LengthNode:
 class RGBAVideoCombine:
     def __init__(self):
         self.base = comfy_paths.output_directory
+        self.count = 0
     
     @classmethod
     def INPUT_TYPES(s):
@@ -48,9 +51,12 @@ class RGBAVideoCombine:
             "required": {
                 "image": ("IMAGE",),
                 "route": ("STRING", {"default": "/api/"}),
+                "fileName": ("STRING", {"default": "output"}),
+                "appendCount": ("BOOLEAN", {"default": False}),
                 "fps": ("INT", {"default": "10"}),
                 "width": ("INT", {"default": "200"}),
                 "height": ("INT", {"default": "200"}),
+                "resetCount": ("BOOLEAN", {"default": False}),
             },
         }
 
@@ -60,8 +66,11 @@ class RGBAVideoCombine:
 
     FUNCTION = "combine_video"
     CATEGORY = "MatisseTec"
-    def combine_video(self, image, route, fps, width, height):
+    def combine_video(self, image, route, fileName, appendCount, fps, width, height, resetCount):
         rand = random.randint(1e5,9e5)
+        self.count += 1
+        if resetCount:
+            self.count = 0
         print(f"in combine with {len(image)} images")
         converted_images = []
         os.makedirs(f"{self.base}{route}temp", exist_ok=True)
@@ -78,7 +87,8 @@ class RGBAVideoCombine:
             frame_filename = f"{self.base}{route}temp/frame_{rand}_{i:03d}.png"
             img_p.save(frame_filename, format="PNG")
             converted_images.append(img_p)
-        output_path = f"{self.base}{route}output.gif"
+        output_path = f"{self.base}{route}{fileName}{self.count}.gif" if appendCount else \
+                      f"{self.base}{route}{fileName}.gif"
         # Save as an animated GIF using FFmpeg
             # "-framerate", f"{fps}",
         subprocess.run([
@@ -116,14 +126,14 @@ class ClipStrings:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "positive": ("STRING", {"default": "person at the skate park"}),
-                "negative": ("STRING", {"default": "nsfw, nude"}),
+                "positive": ("STRING", {"multiline": True, "default": "person at the skatepark"}),
+                "negative": ("STRING", {"multiline": True, "default": "nsfw, nude"}),
                 "clip": ("CLIP",),
             },
         }
 
     RETURN_TYPES = ("CONDITIONING","CONDITIONING",)
-    RETURN_NAMES = ("Positive Conditioning", "Negative Conditioning")
+    RETURN_NAMES = ("Positive Conditioning", "Negative Conditioning",)
 
 
     FUNCTION = "getConditioning"
@@ -149,7 +159,7 @@ class FileReader:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("file content")
+    RETURN_NAMES = ("file content",)
 
 
     FUNCTION = "readFile"
@@ -163,6 +173,168 @@ class FileReader:
     @classmethod
     def IS_CHANGED(cls) -> float: return float("nan")
 
+class StringConcat:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {},
+            "optional": {
+                "stringA": ("STRING",{"default": ""}),
+                "stringB": ("STRING",{"default": ""}),
+                "stringC": ("STRING",{"default": ""}),
+                "stringD": ("STRING",{"default": ""}),
+                "delimiter": ("STRING",{"default": ", "}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("concatenate",)
+
+
+    FUNCTION = "concat"
+    OUTPUT_NODE = True
+    CATEGORY = "MatisseTec"
+    def concat(self, stringA="", stringB="", stringC="", stringD="", delimiter=", "):
+        # delimiter.join(stringA).join(stringB).join(stringC).join(stringD)
+        final = ''
+        if stringA != '':
+            final += stringA
+        if stringB != '':
+            final += delimiter + stringB
+        if stringC != '':
+            final += delimiter + stringC
+        if stringD != '':
+            final += delimiter + stringD
+        return (final,)
+   
+    @classmethod
+    def IS_CHANGED(cls) -> float: return float("nan")
+
+class String:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "string": ("STRING",{"default": ""}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("string",)
+
+
+    FUNCTION = "stringData"
+    OUTPUT_NODE = True
+    CATEGORY = "MatisseTec"
+    def stringData(self, string):
+        return (string,)
+   
+    @classmethod
+    def IS_CHANGED(cls) -> float: return float("nan")
+
+class ImageSelector():
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "imageToSelect": (['first', 'last', 'random'],{"default": "last"}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+
+
+    FUNCTION = "selectImage"
+    OUTPUT_NODE = True
+    CATEGORY = "MatisseTec"
+    def selectImage(self, images, imageToSelect):
+        selector = -1 if imageToSelect == 'last' else 0 if imageToSelect == 'first' else random.randint(0,len(images))
+        return (images[selector],)
+   
+    @classmethod
+    def IS_CHANGED(cls) -> float: return float("nan")
+
+# def load_images_from_url(url, keep_alpha_channel=False):
+#     image = []
+#     mask = []
+
+#     if url.startswith("data:image/"):
+#         i = Image.open(io.BytesIO(base64.b64decode(url.split(",")[1])))
+#     elif url.startswith("file://"):
+#         url = url[7:]
+#         if not os.path.isfile(url):
+#             raise Exception(f"File {url} does not exist")
+
+#         i = Image.open(url)
+#     elif url.startswith("http://") or url.startswith("https://"):
+#         response = requests.get(url, timeout=5)
+#         if response.status_code != 200:
+#             raise Exception(response.text)
+
+#         i = Image.open(io.BytesIO(response.content))
+#     elif url.startswith("/view?"):
+#         from urllib.parse import parse_qs
+
+#         qs = parse_qs(url[6:])
+#         filename = qs.get("name", qs.get("filename", None))
+#         if filename is None:
+#             raise Exception(f"Invalid url: {url}")
+
+#         filename = filename[0]
+#         subfolder = qs.get("subfolder", None)
+#         if subfolder is not None:
+#             filename = os.path.join(subfolder[0], filename)
+
+#         dirtype = qs.get("type", ["input"])
+#         if dirtype[0] == "input":
+#             url = os.path.join(folder_paths.get_input_directory(), filename)
+#         elif dirtype[0] == "output":
+#             url = os.path.join(folder_paths.get_output_directory(), filename)
+#         elif dirtype[0] == "temp":
+#             url = os.path.join(folder_paths.get_temp_directory(), filename)
+#         else:
+#             raise Exception(f"Invalid url: {url}")
+
+#         i = Image.open(url)
+#     else:
+#         raise Exception(f"Invalid url: {url}")
+
+#     i = ImageOps.exif_transpose(i)
+#     has_alpha = "A" in i.getbands()
+#     mask = None
+
+#     if "RGB" not in i.mode:
+#         i = i.convert("RGBA") if has_alpha else i.convert("RGB")
+
+#     if has_alpha:
+#         mask = i.getchannel("A")
+
+#         # recreate image to fix weird RGB image
+#         alpha = i.split()[-1]
+#         image = Image.new("RGB", i.size, (0, 0, 0))
+#         image.paste(i, mask=alpha)
+#         image.putalpha(alpha)
+
+#         if not keep_alpha_channel:
+#             image = image.convert("RGB")
+#     else:
+#         image = i
+
+#     images.append(image)
+#     masks.append(mask)
+
+#     return (images, masks)
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
@@ -170,7 +342,10 @@ NODE_CLASS_MAPPINGS = {
     "list length": LengthNode,
     "rgba video combine": RGBAVideoCombine,
     "clip strings": ClipStrings,
-    "file reader": FileReader
+    "file reader": FileReader,
+    "string concat": StringConcat,
+    "string": String,
+    "image selector": ImageSelector
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
@@ -178,5 +353,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "list length": "List Length 🗃️",
     "rgba video combine": "RGBA Video Combine 🎨📹",
     "clip strings": "clip strings",
-    "file reader": "file reader"
+    "file reader": "file reader",
+    "string concat":"string concat",
+    "string": "string",
+    "image selector": "image selector"
 }
