@@ -1,22 +1,11 @@
 import torch
 from PIL import Image
-from torchvision.transforms.functional import to_pil_image
 import numpy as np
 import subprocess
 import os
 import random
 import nodes
-import base64
-import io
-import requests
 import folder_paths as comfy_paths
-import utils
-# wildcard trick is 100% stolen from pythongossss's
-class AnyType(str):
-    def __ne__(self, __value: object) -> bool:
-        return False
-
-WILDCARD = AnyType("*")
 
 class LengthNode:
     def __init__(self):
@@ -33,9 +22,9 @@ class LengthNode:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("last frame #",)
 
-    FUNCTION = "getLength"
     #OUTPUT_NODE = False
     CATEGORY = "MatisseTec"
+    FUNCTION = "getLength"
     def getLength(self, image):
         return (str(len(image)),)
 
@@ -64,8 +53,8 @@ class RGBAVideoCombine:
     OUTPUT_NODE = True
     OUTPUT_IS_LIST = (None,)
 
-    FUNCTION = "combine_video"
     CATEGORY = "MatisseTec"
+    FUNCTION = "combine_video"
     def combine_video(self, image, route, fileName, appendCount, fps, width, height, resetCount):
         rand = random.randint(1e5,9e5)
         self.count += 1
@@ -162,9 +151,9 @@ class FileReader:
     RETURN_NAMES = ("file content",)
 
 
-    FUNCTION = "readFile"
     OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
+    FUNCTION = "readFile"
     def readFile(self, fileLocation):
         with open(fileLocation, 'r') as f:
             data = f.read()
@@ -194,21 +183,17 @@ class StringConcat:
     RETURN_NAMES = ("concatenate",)
 
 
-    FUNCTION = "concat"
     OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
+    FUNCTION = "concat"
     def concat(self, stringA="", stringB="", stringC="", stringD="", delimiter=", "):
-        # delimiter.join(stringA).join(stringB).join(stringC).join(stringD)
-        final = ''
-        if stringA != '':
-            final += stringA
-        if stringB != '':
-            final += delimiter + stringB
-        if stringC != '':
-            final += delimiter + stringC
-        if stringD != '':
-            final += delimiter + stringD
+        # Use a list comprehension to filter out empty strings, allowing for kwargs later
+        strings = [s for s in [stringA, stringB, stringC, stringD] if s]
+        # Join the non-empty strings with the specified delimiter
+        final = delimiter.join(strings)
+        
         return (final,)
+
    
     @classmethod
     def IS_CHANGED(cls) -> float: return float("nan")
@@ -229,9 +214,9 @@ class String:
     RETURN_NAMES = ("string",)
 
 
-    FUNCTION = "stringData"
     OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
+    FUNCTION = "stringData"
     def stringData(self, string):
         return (string,)
    
@@ -253,11 +238,9 @@ class ImageSelector():
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
-
-
-    FUNCTION = "selectImage"
     OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
+    FUNCTION = "selectImage"
 
     def selectImage(self, images, imageToSelect):
         selector = len(images) - 1 if imageToSelect == 'last' else 0 if imageToSelect == 'first' else random.randint(0, len(images) - 1)
