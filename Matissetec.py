@@ -19,17 +19,17 @@ class LengthNode:
             },
         }
 
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = ("INT",)
     RETURN_NAMES = ("last frame #",)
 
     #OUTPUT_NODE = False
     CATEGORY = "MatisseTec"
     FUNCTION = "getLength"
     def getLength(self, image):
-        return (str(len(image)),)
+        return (len(image),)
 
 
-class RGBAVideoCombine:
+class RGBACombine:
     def __init__(self):
         self.base = comfy_paths.output_directory
         self.count = 0
@@ -42,7 +42,7 @@ class RGBAVideoCombine:
                 "route": ("STRING", {"default": "/api/"}),
                 "fileName": ("STRING", {"default": "output"}),
                 "appendCount": ("BOOLEAN", {"default": False}),
-                "fps": ("INT", {"default": "10"}),
+                "fps": ("FLOAT", {"default": "10"}),
                 "width": ("INT", {"default": "200"}),
                 "height": ("INT", {"default": "200"}),
                 "resetCount": ("BOOLEAN", {"default": False}),
@@ -83,7 +83,8 @@ class RGBAVideoCombine:
         subprocess.run([
             "ffmpeg", "-y",
             "-i", f"{self.base}{route}temp/frame_{rand}_%03d.png",
-            "-vf", f"fps={fps},scale={width}:{height}:flags=lanczos,split [o1][o2];[o1] palettegen [p];[o2][p] paletteuse",
+            "-framerate", str(fps),  # Set the input framerate
+            "-vf", f"scale={width}:{height}:flags=lanczos,split [o1][o2];[o1] palettegen [p];[o2][p] paletteuse",
             "-loop", "0",
             output_path
         ])
@@ -250,6 +251,36 @@ class ImageSelector():
     @classmethod
     def IS_CHANGED(cls) -> float: return float("nan")
 
+class ImageClipper():
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "imageToRemove": (['first', 'last'],{"default": "first"}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    OUTPUT_NODE = True
+    CATEGORY = "MatisseTec"
+    FUNCTION = "selectImages"
+
+    def selectImages(self, images, imageToRemove):
+        if imageToRemove == 'last':
+            selected_images = images[:-1]
+        else:
+            selected_images = images[1:]
+        return (selected_images,)
+
+    @classmethod
+    def IS_CHANGED(cls) -> float: return float("nan")
+
+
 # def load_images_from_url(url, keep_alpha_channel=False):
 #     image = []
 #     mask = []
@@ -325,12 +356,13 @@ class ImageSelector():
 # NOTE: names should be globally unique
 NODE_CLASS_MAPPINGS = {
     "list length": LengthNode,
-    "rgba video combine": RGBAVideoCombine,
+    "rgba video combine": RGBACombine,
     "clip strings": ClipStrings,
     "file reader": FileReader,
     "string concat": StringConcat,
     "string": String,
-    "image selector": ImageSelector
+    "image selector": ImageSelector,
+    "image list clipper": ImageClipper
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
@@ -341,5 +373,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "file reader": "file reader",
     "string concat":"string concat",
     "string": "string",
-    "image selector": "image selector"
+    "image selector": "image selector",
+    "image list clipper": "image list clipper"
 }
