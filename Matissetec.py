@@ -6,6 +6,7 @@ import os
 import random
 import nodes
 import folder_paths as comfy_paths
+import requests
 
 class LengthNode:
     def __init__(self):
@@ -183,7 +184,6 @@ class StringConcat:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("concatenate",)
 
-
     OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
     FUNCTION = "concat"
@@ -195,31 +195,6 @@ class StringConcat:
         
         return (final,)
 
-   
-    @classmethod
-    def IS_CHANGED(cls) -> float: return float("nan")
-
-class String:
-    def __init__(self):
-        pass
-    
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "string": ("STRING",{"default": ""}),
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("string",)
-
-
-    OUTPUT_NODE = True
-    CATEGORY = "MatisseTec"
-    FUNCTION = "stringData"
-    def stringData(self, string):
-        return (string,)
    
     @classmethod
     def IS_CHANGED(cls) -> float: return float("nan")
@@ -244,6 +219,7 @@ class ImageSelector():
     FUNCTION = "selectImage"
 
     def selectImage(self, images, imageToSelect):
+        # Select the image index based on the input word
         selector = len(images) - 1 if imageToSelect == 'last' else 0 if imageToSelect == 'first' else random.randint(0, len(images) - 1)
         selected_image = images[selector:selector+1]
         return (selected_image,)
@@ -280,77 +256,27 @@ class ImageClipper():
     @classmethod
     def IS_CHANGED(cls) -> float: return float("nan")
 
+class ImageTextGenerator():
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "text": ("STRING",{"default": "dog park"}),
+            },
+        }
 
-# def load_images_from_url(url, keep_alpha_channel=False):
-#     image = []
-#     mask = []
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("image desctiption",)
+    # OUTPUT_NODE = True
+    CATEGORY = "MatisseTec"
+    FUNCTION = "generateImage"
 
-#     if url.startswith("data:image/"):
-#         i = Image.open(io.BytesIO(base64.b64decode(url.split(",")[1])))
-#     elif url.startswith("file://"):
-#         url = url[7:]
-#         if not os.path.isfile(url):
-#             raise Exception(f"File {url} does not exist")
-
-#         i = Image.open(url)
-#     elif url.startswith("http://") or url.startswith("https://"):
-#         response = requests.get(url, timeout=5)
-#         if response.status_code != 200:
-#             raise Exception(response.text)
-
-#         i = Image.open(io.BytesIO(response.content))
-#     elif url.startswith("/view?"):
-#         from urllib.parse import parse_qs
-
-#         qs = parse_qs(url[6:])
-#         filename = qs.get("name", qs.get("filename", None))
-#         if filename is None:
-#             raise Exception(f"Invalid url: {url}")
-
-#         filename = filename[0]
-#         subfolder = qs.get("subfolder", None)
-#         if subfolder is not None:
-#             filename = os.path.join(subfolder[0], filename)
-
-#         dirtype = qs.get("type", ["input"])
-#         if dirtype[0] == "input":
-#             url = os.path.join(folder_paths.get_input_directory(), filename)
-#         elif dirtype[0] == "output":
-#             url = os.path.join(folder_paths.get_output_directory(), filename)
-#         elif dirtype[0] == "temp":
-#             url = os.path.join(folder_paths.get_temp_directory(), filename)
-#         else:
-#             raise Exception(f"Invalid url: {url}")
-
-#         i = Image.open(url)
-#     else:
-#         raise Exception(f"Invalid url: {url}")
-
-#     i = ImageOps.exif_transpose(i)
-#     has_alpha = "A" in i.getbands()
-#     mask = None
-
-#     if "RGB" not in i.mode:
-#         i = i.convert("RGBA") if has_alpha else i.convert("RGB")
-
-#     if has_alpha:
-#         mask = i.getchannel("A")
-
-#         # recreate image to fix weird RGB image
-#         alpha = i.split()[-1]
-#         image = Image.new("RGB", i.size, (0, 0, 0))
-#         image.paste(i, mask=alpha)
-#         image.putalpha(alpha)
-
-#         if not keep_alpha_channel:
-#             image = image.convert("RGB")
-#     else:
-#         image = i
-
-#     images.append(image)
-#     masks.append(mask)
-
-#     return (images, masks)
+    def generateImage(self, text):
+        # TODO add enabled flag that will pass back just the text if false
+        return (requests.post("https://deepnarrationapi.matissetec.dev/describeImage", json={"prompt": text}).json()['choices'][0]['message']['content'],)
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
@@ -360,9 +286,9 @@ NODE_CLASS_MAPPINGS = {
     "clip strings": ClipStrings,
     "file reader": FileReader,
     "string concat": StringConcat,
-    "string": String,
     "image selector": ImageSelector,
-    "image list clipper": ImageClipper
+    "image list clipper": ImageClipper,
+    "image text generator": ImageTextGenerator,
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
@@ -372,7 +298,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "clip strings": "clip strings",
     "file reader": "file reader",
     "string concat":"string concat",
-    "string": "string",
     "image selector": "image selector",
-    "image list clipper": "image list clipper"
+    "image list clipper": "image list clipper",
+    "image text generator": "image text generator",
 }
