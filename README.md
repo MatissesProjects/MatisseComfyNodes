@@ -20,4 +20,4 @@ simple string concatenation
 selects an image from a list of images. Can be the first, last, or a random image
 
 ### image text generator
-uses a llm that I host locally, but the node can be modified to allow you to call your own llm if you have one (feature coming soon)
+uses a llm that I host locally, but the node can be modified to allow you to call your own llm if you have one
