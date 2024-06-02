@@ -16,8 +16,8 @@ great for always reading the content of a file, so say you have a different appl
 ### string concat:
 simple string concatenation
 
-### string:
-our own string primitive so we dont have to depend on other libraries for now
-
 ### image selector:
 selects an image from a list of images. Can be the first, last, or a random image
+
+### image text generator
+uses a llm that I host locally, but the node can be modified to allow you to call your own llm if you have one (feature coming soon)
