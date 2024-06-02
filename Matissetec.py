@@ -266,6 +266,9 @@ class ImageTextGenerator():
             "required": {
                 "text": ("STRING",{"default": "dog park"}),
             },
+            "optional": {
+                "apiLocation": ("STRING",{"default": "https://deepnarrationapi.matissetec.dev/describeImage"}),
+            }
         }
 
     RETURN_TYPES = ("STRING",)
@@ -274,9 +277,9 @@ class ImageTextGenerator():
     CATEGORY = "MatisseTec"
     FUNCTION = "generateImage"
 
-    def generateImage(self, text):
+    def generateImage(self, text, apiLocation):
         # TODO add enabled flag that will pass back just the text if false
-        return (requests.post("https://deepnarrationapi.matissetec.dev/describeImage", json={"prompt": text}).json()['choices'][0]['message']['content'],)
+        return (requests.post(apiLocation, json={"prompt": text}).json()['choices'][0]['message']['content'],)
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
