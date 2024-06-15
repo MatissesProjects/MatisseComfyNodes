@@ -258,7 +258,7 @@ class ImageClipper():
 
 class ImageTextGenerator():
     def __init__(self):
-        pass
+        self.lastRun = ""
     
     @classmethod
     def INPUT_TYPES(s):
@@ -268,6 +268,7 @@ class ImageTextGenerator():
             },
             "optional": {
                 "apiLocation": ("STRING",{"default": "https://deepnarrationapi.matissetec.dev/describeImage"}),
+                "control_after_gen": (["new", "keep"],{"default": "keep"}),
             }
         }
 
@@ -275,11 +276,17 @@ class ImageTextGenerator():
     RETURN_NAMES = ("image desctiption",)
     # OUTPUT_NODE = True
     CATEGORY = "MatisseTec"
-    FUNCTION = "generateImage"
+    FUNCTION = "generateDescription"
 
-    def generateImage(self, text, apiLocation):
-        # TODO add enabled flag that will pass back just the text if false
-        return (requests.post(apiLocation, json={"prompt": text}).json()['choices'][0]['message']['content'],)
+    def generateDescription(self, text, apiLocation, control_after_gen="keep"):
+        self.keepLast = control_after_gen == "keep"
+        if self.keepLast:
+            return (self.lastRun,)
+        self.lastRun = requests.post(apiLocation, json={"prompt": text}).json()['choices'][0]['message']['content']
+        return (self.lastRun,)
+
+    def IS_CHANGED(self):
+        return self.keepLast
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
