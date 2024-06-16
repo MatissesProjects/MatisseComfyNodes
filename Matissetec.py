@@ -259,6 +259,7 @@ class ImageClipper():
 class ImageTextGenerator():
     def __init__(self):
         self.lastRun = ""
+        self.lastText = ""
     
     @classmethod
     def INPUT_TYPES(s):
@@ -269,6 +270,7 @@ class ImageTextGenerator():
             "optional": {
                 "apiLocation": ("STRING",{"default": "https://deepnarrationapi.matissetec.dev/describeImage"}),
                 "control_after_gen": (["new", "keep"],{"default": "keep"}),
+                "maxTimeSeconds": ("INT",{"default": 10}),
             }
         }
 
@@ -278,13 +280,20 @@ class ImageTextGenerator():
     CATEGORY = "MatisseTec"
     FUNCTION = "generateDescription"
 
-    def generateDescription(self, text, apiLocation, control_after_gen="keep"):
+    def generateDescription(self, text, apiLocation, control_after_gen="keep", maxTimeSeconds=10):
         self.keepLast = control_after_gen == "keep"
-        if self.keepLast:
+        if self.keepLast and self.lastRun != "" and self.lastText == text:
             return (self.lastRun,)
-        self.lastRun = requests.post(apiLocation, json={"prompt": text}).json()['choices'][0]['message']['content']
+        urlReturned = requests.post(apiLocation, json={"prompt": text, "discordId": 630649313860780043}).text
+        for _ in range(maxTimeSeconds):
+            time.sleep(1)
+            if requests.get(urlReturned).status_code == 200:
+                self.lastRun = requests.get(urlReturned).text
+                break # stop sleeping we finished!
+        self.lastText = text
         return (self.lastRun,)
 
+    @classmethod
     def IS_CHANGED(self):
         return self.keepLast
 
